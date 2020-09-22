@@ -20,6 +20,7 @@ import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableArray;
 import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.WritableMap;
+import com.facebook.react.common.BOMUtils;
 import com.facebook.react.common.StandardCharsets;
 import com.facebook.react.common.network.OkHttpCallUtil;
 import com.facebook.react.module.annotations.ReactModule;
@@ -45,6 +46,8 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
+import okio.Buffer;
+import okio.BufferedSource;
 import okio.ByteString;
 import okio.GzipSource;
 import okio.Okio;
@@ -593,9 +596,10 @@ public final class NetworkingModule extends NativeNetworkingAndroidSpec {
         responseBody.contentType() == null
             ? StandardCharsets.UTF_8
             : responseBody.contentType().charset(StandardCharsets.UTF_8);
-
-    ProgressiveStringDecoder streamDecoder = new ProgressiveStringDecoder(charset);
-    InputStream inputStream = responseBody.byteStream();
+    BufferedSource source = responseBody.source();
+    Charset bomCharset = BOMUtils.readBomAsCharset(source, charset);
+    InputStream inputStream = source.inputStream();
+    ProgressiveStringDecoder streamDecoder = new ProgressiveStringDecoder(bomCharset);
     try {
       byte[] buffer = new byte[MAX_CHUNK_SIZE_BETWEEN_FLUSHES];
       int read;

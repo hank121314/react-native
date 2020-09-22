@@ -20,7 +20,9 @@ import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReadableArray;
 import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.WritableMap;
+import com.facebook.react.common.BOMUtils;
 import com.facebook.react.common.MapBuilder;
+import com.facebook.react.common.StandardCharsets;
 import com.facebook.react.module.annotations.ReactModule;
 import com.facebook.react.modules.network.NetworkingModule;
 import com.facebook.react.modules.websocket.WebSocketModule;
@@ -39,6 +41,7 @@ import java.util.UUID;
 import okhttp3.MediaType;
 import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
+import okio.BufferedSource;
 import okio.ByteString;
 
 @ReactModule(name = BlobModule.NAME)
@@ -131,7 +134,13 @@ public class BlobModule extends NativeBlobModuleSpec {
 
         @Override
         public WritableMap toResponseData(ResponseBody body) throws IOException {
-          byte[] data = body.bytes();
+          Charset charset =
+            body.contentType() == null
+              ? StandardCharsets.UTF_8
+              : body.contentType().charset(StandardCharsets.UTF_8);
+          BufferedSource source = body.source();
+          BOMUtils.readBomAsCharset(source, charset);
+          byte[] data = source.readByteArray();
           WritableMap blob = Arguments.createMap();
           blob.putString("blobId", store(data));
           blob.putInt("offset", 0);
